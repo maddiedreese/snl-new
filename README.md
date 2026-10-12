@@ -60,7 +60,8 @@ strings, accents, CJK, emoji, empty fields, and dates. It also checks PNG creati
 The test page is not included in the production build.
 
 The optional font development script is `scripts/build-font.py`, using Python
-`fonttools`, `shapely`, and `brotli`. Its checked-in WOFF2 output is sufficient for
+`fonttools`, `shapely`, `brotli`, and a local FreeType library for the subtle stroke
+weight adjustment. Its checked-in WOFF2 output is sufficient for
 normal web builds. See `ASSETS.md` for source and provenance details.
 
 ## GitHub → Netlify

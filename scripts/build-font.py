@@ -1,6 +1,6 @@
 """Build Studio Marker from the checked-in hand-lettering outlines.
 
-Development only: pip install fonttools shapely brotli
+Development only: pip install fonttools shapely brotli; install FreeType locally.
 The checked-in WOFF2 is sufficient for normal site builds.
 """
 from pathlib import Path
@@ -8,6 +8,8 @@ import math
 import hashlib
 import json
 import unicodedata
+import ctypes
+from ctypes.util import find_library
 from fontTools.fontBuilder import FontBuilder
 from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
 from fontTools.pens.basePen import BasePen
@@ -252,8 +254,42 @@ for alternate in ['A.alt', 'O.alt', 'S.alt', 'T.alt']:
     draw_letter(alt_pen, alternate, {})
     glyphs[alternate] = alt_pen.glyph()
     metrics[alternate] = (reference_paths[alternate]['advance']*12, 12)
+# Expand the existing curves slightly without resampling their smooth outlines.
+# FreeType preserves contour points and curve tags; advances and kerning stay put.
+class FTVector(ctypes.Structure):
+    _fields_ = [('x', ctypes.c_long), ('y', ctypes.c_long)]
+
+class FTOutline(ctypes.Structure):
+    _fields_ = [('n_contours', ctypes.c_ushort), ('n_points', ctypes.c_ushort),
+                ('points', ctypes.POINTER(FTVector)),
+                ('tags', ctypes.POINTER(ctypes.c_ubyte)),
+                ('contours', ctypes.POINTER(ctypes.c_ushort)), ('flags', ctypes.c_int)]
+
+freetype_path = find_library('freetype')
+if not freetype_path:
+    raise RuntimeError('Install FreeType to rebuild the font (brew install freetype on macOS).')
+freetype = ctypes.CDLL(freetype_path)
+freetype.FT_Outline_Embolden.argtypes = [ctypes.POINTER(FTOutline), ctypes.c_long]
+freetype.FT_Outline_Embolden.restype = ctypes.c_int
+WEIGHT_INCREASE = 8  # Font units: four units outward on each side of the stroke.
+
+def embolden(letter):
+    points = (FTVector * len(letter.coordinates))(
+        *(FTVector(round(x * 64), round(y * 64)) for x, y in letter.coordinates))
+    tags = (ctypes.c_ubyte * len(letter.flags))(*(flag & 1 for flag in letter.flags))
+    ends = (ctypes.c_ushort * len(letter.endPtsOfContours))(*letter.endPtsOfContours)
+    outline = FTOutline(letter.numberOfContours, len(points), points, tags, ends, 0)
+    error = freetype.FT_Outline_Embolden(ctypes.byref(outline), WEIGHT_INCREASE * 64)
+    if error:
+        raise RuntimeError(f'FreeType could not embolden outline: {error}')
+    # FreeType expands upward/rightward; recenter on the accepted letter position.
+    for i, point in enumerate(points):
+        letter.coordinates[i] = (round(point.x / 64 - WEIGHT_INCREASE / 2),
+                                 round(point.y / 64 - WEIGHT_INCREASE / 2))
+
 for name, letter in glyphs.items():
     if letter.numberOfContours:
+        embolden(letter)
         letter.recalcBounds(None)
         metrics[name] = (metrics[name][0], letter.xMin)
 font.setupGlyphOrder(list(glyphs))
