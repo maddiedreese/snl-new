@@ -36,3 +36,12 @@ test('layout handles empty text and graphemes without losing characters', () => 
     assert.equal(layout.lines.join('').replaceAll(' ',''),normalizeText(value).replaceAll(' ',''));
   }
 });
+
+test('single-word names shrink without splitting off letters', () => {
+  const context = { font: '', measureText(text) { const size=parseFloat(this.font); const width=text.length*size*.5; return {width,actualBoundingBoxLeft:0,actualBoundingBoxRight:width,actualBoundingBoxAscent:size*.75,actualBoundingBoxDescent:0}; } };
+  for (const name of ['Turnstile', 'Florence', 'Bartholomew']) {
+    const layout=fitText(context,name,{width:618,height:326,maxSize:218,maxLines:3});
+    assert.deepEqual(layout.lines,[name.toUpperCase()]);
+    assert.ok(layout.metrics[0].width<=618);
+  }
+});

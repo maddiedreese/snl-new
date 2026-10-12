@@ -8,6 +8,7 @@ import math
 import json
 import unicodedata
 from fontTools.fontBuilder import FontBuilder
+from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
 from fontTools.pens.basePen import BasePen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.svgLib.path import parse_path
@@ -215,12 +216,25 @@ font.setupGlyf(glyphs)
 font.setupHorizontalMetrics(metrics)
 font.setupHorizontalHeader(ascent=950, descent=-240)
 font.setupOS2(sTypoAscender=950, sTypoDescender=-240, usWinAscent=960, usWinDescent=240, sCapHeight=740, sxHeight=740)
-font.setupNameTable({'familyName':'Studio Marker', 'styleName':'Regular', 'uniqueFontIdentifier':'StudioMarker-2.0', 'fullName':'Studio Marker Regular', 'psName':'StudioMarker-Regular', 'version':'Version 2.0', 'copyright':'Custom font software for snl-new. Lettering study based on announcement-card references; not an official NBC font.'})
+font.setupNameTable({'familyName':'Studio Marker', 'styleName':'Regular', 'uniqueFontIdentifier':'StudioMarker-3.0', 'fullName':'Studio Marker Regular', 'psName':'StudioMarker-Regular', 'version':'Version 3.0', 'copyright':'Custom font software for snl-new. Lettering study based on announcement-card references; not an official NBC font.'})
 font.setupPost()
 font.setupMaxp()
-out=root/'public/fonts'
+# Optical pairs follow the narrow, interlocking spacing on the reference cards.
+# Crossbars can overhang neighbouring letters without widening the whole word.
+kern = {'DA':-75, 'AK':-75, 'KA':-70, 'KO':-85, 'OT':-120,
+        'TA':-145, 'AT':-95, 'AY':-110, 'YA':-90, 'YO':-100,
+        'JO':-95, 'OH':-40, 'HN':-45, 'NS':-45, 'SO':-70,
+        'ON':-45, 'TU':-125, 'UR':-45, 'RN':-65, 'ST':-95,
+        'TI':-90, 'IL':-35, 'LE':-55, 'OC':-65, 'CT':-85,
+        'ED':-45, 'DE':-60, 'EB':-45, 'BI':-40, 'IR':-35,
+        'RI':-50, 'HO':-45, 'OZ':-45, 'ZI':-45, 'IE':-40,
+        'ER':-50, 'GR':-70, 'RA':-70, 'AC':-60, 'CI':-45,
+        'BR':-60, 'RU':-70, 'UN':-55, 'SE':-55, 'EY':-80}
+rules = [f"pos {cmap[ord(a)]} {cmap[ord(b)]} {amount};" for (a,b),amount in kern.items()]
+addOpenTypeFeaturesFromString(font.font, 'feature kern { '+ ' '.join(rules) +' } kern;')
+out=root/'public/fonts' 
 out.mkdir(parents=True,exist_ok=True)
 font.save(out/'StudioMarker-Regular.ttf')
 font.font.flavor='woff2'
 font.save(out/'studio-marker.woff2')
-print(f'Built {len(glyphs)} original glyphs; {len(cmap)} mapped characters.')
+print(f'Built {len(glyphs)} glyphs; {len(cmap)} mapped characters.')

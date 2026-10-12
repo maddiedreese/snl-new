@@ -13,12 +13,6 @@ export function measureInk(ctx, text) {
     ascent: m.actualBoundingBoxAscent || 0, descent: m.actualBoundingBoxDescent || 0 };
 }
 
-function graphemes(text) {
-  return typeof Intl.Segmenter === 'function'
-    ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)].map(s => s.segment)
-    : Array.from(text);
-}
-
 function wrap(ctx, text, width) {
   const lines = [];
   let line = '';
@@ -28,11 +22,9 @@ function wrap(ctx, text, width) {
     if (line) lines.push(line);
     line = '';
     if (measureInk(ctx, word).width <= width) { line = word; continue; }
-    // Even an unbroken name, URL, CJK string, or emoji sequence must fit.
-    for (const char of graphemes(word)) {
-      if (line && measureInk(ctx, line + char).width > width) { lines.push(line); line = ''; }
-      line += char;
-    }
+    // Preserve a name's spelling and silhouette. A long word is fitted by
+    // reducing type size, never by stranding its last letter on another line.
+    line = word;
   }
   if (line) lines.push(line);
   return lines;

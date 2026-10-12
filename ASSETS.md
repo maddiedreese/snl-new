@@ -25,7 +25,8 @@ The earlier CC0 candidate is also not the final asset.
 - Build source: `scripts/build-font.py`, `scripts/letterforms.json`.
 - The font software is constructed in this project; no proprietary font binary
   or commercially licensed font program has been copied.
-- Main uppercase/digit outlines were digitized and refined from individual
+- Most uppercase/digit outlines use the September 2026 board consistently.
+  Individual outlines were digitized and refined from
   letterforms in announcement references. Missing glyphs and punctuation are
   custom chisel-pen constructions, with composed Latin accents.
 - A font cannot replicate all contextual differences of handwriting. It should
@@ -39,10 +40,6 @@ Letterform reference key used in the source outline JSON:
   https://www.nbcuniversal.com/article/saturday-night-live-premiere-52nd-season-sept-26-nbc-and-peacock
 - `jan`: January 2026 board reproduced at
   https://sitcomsonline.com/photos/saturdaynightlive-january2026.jpg
-- `dec`: December 2025 board reproduced at
-  https://www.brooklynvegan.com/snl-taps-lily-allen-dijon-cher-ariana-grande-for-december-episodes/
-- `apr`: April 2025 board reproduced at
-  https://www.cracked.com/article_46124_heres-how-snl-cast-members-find-out-about-upcoming-celebrity-hosts.html
 
 ## Paper, pins, favicon, and interface
 
