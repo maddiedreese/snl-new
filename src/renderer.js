@@ -2,6 +2,9 @@ import { fitText, FONT_STACK, normalizeText } from './layout.js';
 
 export const WIDTH = 1080;
 export const HEIGHT = 1350;
+export const RENDER_SCALE = 2;
+export const EXPORT_WIDTH = WIDTH * RENDER_SCALE;
+export const EXPORT_HEIGHT = HEIGHT * RENDER_SCALE;
 export const DEFAULT_COLORS = ['#f6efdd', '#bef0f1', '#f174c5'];
 export const PINS = [
   { id: 'clear', label: 'Clear', color: '#c4ccd0' },
@@ -26,14 +29,14 @@ async function loadPhoto() {
 }
 
 function corkBackground(photo) {
-  const c = canvas(WIDTH, HEIGHT), ctx = c.getContext('2d', { willReadFrequently: true });
+  const c = canvas(EXPORT_WIDTH, EXPORT_HEIGHT), ctx = c.getContext('2d', { willReadFrequently: true });
   // One photograph, placed once. Never tiled, mirrored, or synthetically generated.
-  const scale = Math.max(WIDTH / photo.width, HEIGHT / photo.height);
-  ctx.drawImage(photo, (WIDTH - photo.width * scale) / 2, (HEIGHT - photo.height * scale) / 2, photo.width * scale, photo.height * scale);
-  const pixels = ctx.getImageData(0, 0, WIDTH, HEIGHT), data = pixels.data;
+  const scale = Math.max(EXPORT_WIDTH / photo.width, EXPORT_HEIGHT / photo.height);
+  ctx.drawImage(photo, (EXPORT_WIDTH - photo.width * scale) / 2, (EXPORT_HEIGHT - photo.height * scale) / 2, photo.width * scale, photo.height * scale);
+  const pixels = ctx.getImageData(0, 0, EXPORT_WIDTH, EXPORT_HEIGHT), data = pixels.data;
   let sum = 0, squared = 0;
   for (let i = 0; i < data.length; i += 4) { const l = .2126 * data[i] + .7152 * data[i+1] + .0722 * data[i+2]; sum += l; squared += l*l; }
-  const n = WIDTH * HEIGHT, mean = sum/n, sd = Math.sqrt(squared/n - mean*mean);
+  const n = EXPORT_WIDTH * EXPORT_HEIGHT, mean = sum/n, sd = Math.sqrt(squared/n - mean*mean);
   // Muted beige/pink sampled from exposed cork in the NBC reference.
   // Tonal mapping preserves the real photographic grain and its irregularity.
   for (let i = 0; i < data.length; i += 4) {
@@ -93,8 +96,14 @@ export async function createRenderer() {
   if (!document.fonts.check('100px "Studio Marker"')) throw new Error('The marker font could not load.');
   const photo = await loadPhoto(), cork = corkBackground(photo), texture = paperTexture();
   return (target, state) => {
+    // Render vector lettering directly at export resolution; never enlarge a
+    // small text bitmap. Layout measurements stay in logical board coordinates.
+    if (target.width !== EXPORT_WIDTH) target.width = EXPORT_WIDTH;
+    if (target.height !== EXPORT_HEIGHT) target.height = EXPORT_HEIGHT;
     const ctx = target.getContext('2d');
-    ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.drawImage(cork, 0, 0);
+    ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
+    ctx.fontKerning = 'normal';
+    ctx.clearRect(0, 0, WIDTH, HEIGHT); ctx.drawImage(cork, 0, 0, WIDTH, HEIGHT);
     const layouts = [];
     const choice = PINS.find(p => p.id === state.pin) || PINS[0];
     const w = 698, h = 408, positions = [243, 675, 1107], angles = [-.006,.004,-.008];
@@ -111,6 +120,7 @@ export async function createRenderer() {
       const box = { width: w-80, height: h-82, maxSize: i===0 ? 200 : 218, maxLines:3, date:i===0 };
       const layout = fitText(ctx,text,box); layouts.push({...layout,box,text:normalizeText(text)});
       ctx.font=`${layout.fontSize}px ${FONT_STACK}`; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+      ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
       // Dark ink for all ordinary cards; white ink only for very dark custom paper.
       const rgb=state.colors[i].match(/[a-f\d]{2}/gi).map(v=>parseInt(v,16));
       ctx.fillStyle = .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2] < 73 ? '#faf8ee' : '#10100e';

@@ -182,11 +182,27 @@ for cp, base in {0x2018:"'",0x2019:"'",0x201c:'"',0x201d:'"',0x2013:'-',0x2014:'
     cmap[cp]=cmap[ord(base)]
 
 # Reference-informed uppercase outlines. The supplied points retain the writer's
-# asymmetric ink shapes; midpoint curves remove only low-resolution stair steps.
+# asymmetric ink shapes. Clean tracing noise before constructing smooth curves.
 letterforms=json.loads((root/'scripts/letterforms.json').read_text())
 cap_heights={'A':710,'E':675,'L':675,'N':725,'J':735,'T':740,'Y':735,'O':705,'S':685,'F':710,'D':705}
+def clean_contours(contours):
+    # The reference is a small raster image. Its pixel steps, pinholes and
+    # one-pixel notches are sampling artifacts, not intentional pen texture.
+    shape = Polygon(contours[0], [ring for ring in contours[1:]
+                    if abs(Polygon(ring).area) > 900]).buffer(0)
+    shape = shape.buffer(12, join_style=1).buffer(-12, join_style=1)
+    shape = shape.buffer(-6, join_style=1).buffer(6, join_style=1)
+    shape = shape.simplify(7, preserve_topology=True)
+    result = []
+    for polygon in getattr(shape, 'geoms', [shape]):
+        polygon = orient(polygon, sign=1)
+        result.extend([list(ring.coords)[:-1] for ring in
+                       [polygon.exterior, *polygon.interiors]])
+    return result
+
+
 def draw_contours(pen, contours, scale=1, dy=0):
-    for outline in contours:
+    for outline in clean_contours(contours):
         points=[(x,y*scale+dy) for x,y in outline]
         pen.moveTo(((points[-1][0]+points[0][0])/2,(points[-1][1]+points[0][1])/2))
         for i,p in enumerate(points):
@@ -216,11 +232,12 @@ font.setupGlyf(glyphs)
 font.setupHorizontalMetrics(metrics)
 font.setupHorizontalHeader(ascent=950, descent=-240)
 font.setupOS2(sTypoAscender=950, sTypoDescender=-240, usWinAscent=960, usWinDescent=240, sCapHeight=740, sxHeight=740)
-font.setupNameTable({'familyName':'Studio Marker', 'styleName':'Regular', 'uniqueFontIdentifier':'StudioMarker-3.0', 'fullName':'Studio Marker Regular', 'psName':'StudioMarker-Regular', 'version':'Version 3.0', 'copyright':'Custom font software for snl-new. Lettering study based on announcement-card references; not an official NBC font.'})
+font.setupNameTable({'familyName':'Studio Marker', 'styleName':'Regular', 'uniqueFontIdentifier':'StudioMarker-3.1', 'fullName':'Studio Marker Regular', 'psName':'StudioMarker-Regular', 'version':'Version 3.1', 'copyright':'Custom font software for snl-new. Lettering study based on announcement-card references; not an official NBC font.'})
 font.setupPost()
 font.setupMaxp()
 # Optical pairs follow the narrow, interlocking spacing on the reference cards.
-# Crossbars can overhang neighbouring letters without widening the whole word.
+# Moderate pair adjustments keep the hooked crossbars visible rather than
+# merging them into adjacent stems at normal preview size.
 kern = {'DA':-75, 'AK':-75, 'KA':-70, 'KO':-85, 'OT':-120,
         'TA':-145, 'AT':-95, 'AY':-110, 'YA':-90, 'YO':-100,
         'JO':-95, 'OH':-40, 'HN':-45, 'NS':-45, 'SO':-70,
@@ -230,7 +247,7 @@ kern = {'DA':-75, 'AK':-75, 'KA':-70, 'KO':-85, 'OT':-120,
         'RI':-50, 'HO':-45, 'OZ':-45, 'ZI':-45, 'IE':-40,
         'ER':-50, 'GR':-70, 'RA':-70, 'AC':-60, 'CI':-45,
         'BR':-60, 'RU':-70, 'UN':-55, 'SE':-55, 'EY':-80}
-rules = [f"pos {cmap[ord(a)]} {cmap[ord(b)]} {amount};" for (a,b),amount in kern.items()]
+rules = [f"pos {cmap[ord(a)]} {cmap[ord(b)]} {round(amount * .4)};" for (a,b),amount in kern.items()]
 addOpenTypeFeaturesFromString(font.font, 'feature kern { '+ ' '.join(rules) +' } kern;')
 out=root/'public/fonts' 
 out.mkdir(parents=True,exist_ok=True)

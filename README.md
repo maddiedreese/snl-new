@@ -31,7 +31,7 @@ or AI generation calls. Vite is only used to build and serve the source.
   not an official font or a promise of pixel-identical handwritten names.
 - The font loads before the first render. Text fitting uses actual ink bounds,
   balanced line choices, and grapheme-aware emergency wrapping, including long
-  unbroken input. Preview and PNG export use the same 1080 × 1350 canvas.
+  unbroken input. Preview and PNG export use the same 2160 × 2700 canvas (2× vector rendering).
 - Each edit invalidates the previous export. Revision checks prevent stale
   asynchronous PNG encodes from replacing the current image.
 - Downloads use a Blob URL. A same-page image dialog supports saving on phones;
