@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8"><title>Card renderer checks</title>
+<style>@font-face{font-family:Studio Marker;src:url('/fonts/studio-marker.woff2?v=4')}body{font:16px system-ui;padding:20px}canvas{width:216px;border:1px solid #ccc}pre{white-space:pre-wrap}</style>
+<h1>Card renderer checks</h1><p id="result">Running…</p><pre id="details"></pre><canvas id="test" width="1080" height="1350"></canvas>
+<script type="module">
+import {createRenderer,DEFAULT_COLORS} from '/src/renderer.js';
+import {fitText,FONT_STACK,normalizeText} from '/src/layout.js';
+import {hosts,musicalGuests} from '/src/celebrities.js';
+const result=document.querySelector('#result'),details=document.querySelector('#details'),canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
+const failures=[]; let checked=0;
+try {
+ const render=await createRenderer();
+ const cases=[...hosts,...musicalGuests,'W'.repeat(160),'i'.repeat(160),'THE EXTREMELY LONG MUSICAL GUEST NAME WITH A VERY VERY LONG SURNAME THAT MUST ALWAYS FIT','Alexandria-Cassandra-Montgomery-Worthington-Smythe','🎤✨👨‍👩‍👧‍👦'.repeat(12),'山田太郎と彼の素晴らしい友達'.repeat(8),'ÉLÈNE ÅNGSTRÖM ŠIMŮNEK ŽOE ŁUKASZ','<img src=x onerror=alert(1)>', '', '     '];
+ for (const text of cases) {
+  const fit=fitText(ctx,text,{width:618,height:326,maxSize:218,maxLines:3});
+  if(normalizeText(text) && !fit.lines.length) failures.push({text,error:'missing text'});
+  if(fit.height>326 || fit.metrics.some(m=>m.width>618) || fit.lines.length>3) failures.push({text,error:'overflow',fit});
+  if(fit.lines.join('').replaceAll(' ','')!==normalizeText(text).replaceAll(' ','')) failures.push({text,error:'lost characters'});
+  checked++;
+  if(checked%100===0){result.textContent=`Checking ${checked} / ${cases.length}…`;await new Promise(r=>requestAnimationFrame(r));}
+ }
+ for(const date of ['OCT 17','DECEMBER 31, 2026','A'.repeat(60),'', 'JUL 4']){
+  const fit=fitText(ctx,date,{width:618,height:326,maxSize:200,maxLines:3,date:true});
+  if(fit.height>326 || fit.metrics.some(m=>m.width>618)) failures.push({date,error:'date overflow'});
+  checked++;
+ }
+ render(canvas,{date:'OCT 17',host:'Ayo Edebiri',music:'Hozier',colors:DEFAULT_COLORS,pin:'clear'});
+ const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));
+ if(!blob || blob.size<10000 || blob.type!=='image/png')failures.push({error:'export failed'});
+ result.textContent=failures.length?`FAIL: ${failures.length} cases`:`PASS: ${checked} real-font layouts and PNG export`;
+ details.textContent=JSON.stringify({checked,fontLoaded:document.fonts.check(`100px ${FONT_STACK}`),exportBytes:blob?.size,failures},null,2);
+} catch(error){result.textContent='FAIL';details.textContent=error.stack;}
+</script>

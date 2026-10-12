@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f5f1" />
+    <title>SNL Card Generator — Make Your Own Announcement</title>
+    <meta name="description" content="Make your dream Saturday Night Live lineup. Customize the date, host, musical guest, card colors, and push pins, then download your free announcement card." />
+    <link rel="canonical" href="https://snlcards.me/" />
+    <meta property="og:title" content="SNL Card Generator" />
+    <meta property="og:description" content="Your host. Your musical guest. Your Saturday night." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://snlcards.me/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/studio-marker.woff2?v=4" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#editor">Skip to card editor</a>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="SNL Cards home"><span class="brand-snl">SNL</span><span class="brand-divider"></span><span class="brand-cards">CARDS</span></a>
+      <span class="header-note">LIVE FROM YOUR IMAGINATION</span>
+      <a class="creator" href="https://www.instagram.com/maddiedreese/" target="_blank" rel="noopener noreferrer">by @maddiedreese <span aria-hidden="true">↗</span></a>
+    </header>
+    <main>
+      <div class="intro"><div><p class="eyebrow">THE UNOFFICIAL ANNOUNCEMENT MAKER</p><h1>Your Saturday night.</h1><p class="intro-copy">Pick the lineup. Pin it up. Make it yours.</p></div><span class="intro-stamp" aria-hidden="true">YOU'RE<br>ON.</span></div>
+      <div class="workspace">
+        <section id="editor" class="editor" aria-labelledby="editor-title">
+          <div class="section-heading"><h2 id="editor-title">Set the lineup</h2><span class="step">01 / 02</span></div>
+          <form id="lineup-form" autocomplete="off">
+            <div class="field"><label for="date"><span class="field-dot cream"></span>Date</label><input id="date" name="date" maxlength="60" value="OCT 17" placeholder="OCT 17" spellcheck="false" /><span class="input-hint">Any date. Any occasion.</span></div>
+            <div class="field"><label for="host"><span class="field-dot aqua"></span>Host</label><div class="input-action"><input id="host" name="host" maxlength="160" value="Ayo Edebiri" list="host-suggestions" spellcheck="false" placeholder="Your dream host" /><button type="button" id="shuffle-host" class="icon-button" aria-label="Randomize host" title="Randomize host">↝</button></div><datalist id="host-suggestions"></datalist></div>
+            <div class="field"><label for="music"><span class="field-dot pink"></span>Musical guest</label><div class="input-action"><input id="music" name="music" maxlength="160" value="Hozier" list="music-suggestions" spellcheck="false" placeholder="Your dream musical guest" /><button type="button" id="shuffle-music" class="icon-button" aria-label="Randomize musical guest" title="Randomize musical guest">↝</button></div><datalist id="music-suggestions"></datalist></div>
+            <button type="button" id="shuffle-all" class="shuffle-button"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h3c5 0 7 14 12 14h3m-4-4 4 4-4 4M3 19h3c2 0 4-3 6-7s4-7 6-7h3m-4-4 4 4-4 4"/></svg>Surprise me<span class="shuffle-count" id="suggestion-count"></span></button>
+            <div class="divider"></div>
+            <div class="section-heading"><h2>Make it yours</h2><span class="step">02 / 02</span></div>
+            <fieldset class="color-fieldset"><legend>Card colors</legend><div id="card-colors" class="card-colors"></div></fieldset>
+            <fieldset class="pin-fieldset"><legend>Push pins <span id="pin-name">Clear</span></legend><div id="pin-colors" class="pin-colors"></div></fieldset>
+            <div class="reset-row"><button type="button" id="reset-style" class="text-button">Reset colors</button><span>Classic is always in.</span></div>
+          </form>
+        </section>
+        <section class="preview-section" aria-labelledby="preview-title">
+          <div class="preview-heading"><h2 id="preview-title">THE LINEUP</h2><span class="live-label"><i></i>Live preview</span></div>
+          <div class="board-wrap"><canvas id="board" width="1080" height="1350" role="img" aria-label="Announcement board: October 17, hosted by Ayo Edebiri, with musical guest Hozier.">Your announcement preview. Edit the fields to customize the image.</canvas><div id="loading" class="loading">Setting up the board…</div></div>
+          <div class="export-row"><div><span class="export-title">Ready for its big debut.</span><span class="export-detail">PNG · 1080 × 1350 · No watermark</span></div><button id="download" class="primary-button" type="button" disabled><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg>Download</button></div>
+          <div class="secondary-actions"><button id="share" type="button" class="text-button" hidden>Share image ↗</button><button id="open-image" type="button" class="text-button" disabled>Open image to save</button><p>Made in your browser. No account, no uploads.</p></div>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+        </section>
+      </div>
+      <section class="about"><h2>The dream lineup is yours.</h2><p>Make a Saturday Night Live–inspired announcement for your favorite people, your next party, or a Saturday night that really should happen. Type any name, choose your colors, and save your board.</p><details><summary>A few things to know <span aria-hidden="true">+</span></summary><p>Names resize and wrap automatically. Your text and images stay in your browser. On a phone, use “Open image to save,” then touch and hold the image to save it to Photos.</p><p>The randomizer offers an editable collection of entertainers, artists, and athletes. Suggestions are for fun and aren’t an endorsement or a claim about anyone’s conduct.</p></details></section>
+    </main>
+    <footer><span>Created by <a href="https://www.instagram.com/maddiedreese/" target="_blank" rel="noopener noreferrer">@maddiedreese</a></span><span>A fan project. Not affiliated with NBC or Saturday Night Live.</span><a href="/credits.html">Asset credits</a></footer>
+    <dialog id="image-dialog"><button id="close-dialog" type="button" class="dialog-close" aria-label="Close image">×</button><p>Touch and hold to save to Photos, or right-click to save.</p><img id="export-image" alt="Your customized announcement board" /><a id="dialog-download" class="primary-button" download="snl-card.png">Download PNG</a></dialog>
+    <noscript><p class="noscript">JavaScript is needed to draw and download your cards. Please enable it to use the editor.</p></noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
