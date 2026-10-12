@@ -5,12 +5,15 @@ The checked-in WOFF2 is sufficient for normal site builds.
 """
 from pathlib import Path
 import math
+import hashlib
 import json
 import unicodedata
 from fontTools.fontBuilder import FontBuilder
 from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
 from fontTools.pens.basePen import BasePen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
+from fontTools.pens.cu2quPen import Cu2QuPen
+from fontTools.pens.transformPen import TransformPen
 from fontTools.svgLib.path import parse_path
 from shapely.geometry import Polygon, MultiPoint
 from shapely.geometry.polygon import orient
@@ -184,6 +187,10 @@ for cp, base in {0x2018:"'",0x2019:"'",0x201c:'"',0x201d:'"',0x2013:'-',0x2014:'
 # Reference-informed uppercase outlines. The supplied points retain the writer's
 # asymmetric ink shapes. Clean tracing noise before constructing smooth curves.
 letterforms=json.loads((root/'scripts/letterforms.json').read_text())
+reference_paths=json.loads((root/'scripts/reference-paths.json').read_text())
+for char in reference_paths:
+    if len(char) == 1:
+        letterforms.setdefault(char, {})
 cap_heights={'A':710,'E':675,'L':675,'N':725,'J':735,'T':740,'Y':735,'O':705,'S':685,'F':710,'D':705}
 def clean_contours(contours):
     # The reference is a small raster image. Its pixel steps, pinholes and
@@ -209,30 +216,54 @@ def draw_contours(pen, contours, scale=1, dy=0):
             nxt=points[(i+1)%len(points)]
             pen.qCurveTo(p,((p[0]+nxt[0])/2,(p[1]+nxt[1])/2))
         pen.closePath()
+def draw_letter(pen, char, data):
+    if char in reference_paths:
+        entry = reference_paths[char]
+        x,y = entry['origin']
+        # Shared source scale retains short bowls, taller uprights and descenders.
+        # Smooth authored Beziers replace cropped raster contour boundaries.
+        transformed = TransformPen(Cu2QuPen(pen, max_err=.5), (12,0,0,-12,12-x*12,740+y*12))
+        parse_path(entry['path'], transformed)
+    else:
+        height = data['bounds'][3]*12 if data.get('reference') == 'sep' else cap_heights.get(char,700)
+        draw_contours(pen,data['contours'],height/700)
+
 for char,data in letterforms.items():
     pen=TTGlyphPen(None)
-    draw_contours(pen,data['contours'],cap_heights.get(char,700)/700)
+    draw_letter(pen, char, data)
     name=cmap[ord(char)]
     glyphs[name]=pen.glyph()
-    metrics[name]=(data['advance']+3,12)
+    metrics[name]=(round(reference_paths[char]['advance']*12) if char in reference_paths else data['advance']+3,12)
     for cp in range(0xc0,0x180):
         decomp=unicodedata.normalize('NFD',chr(cp).upper())
         if len(decomp)==2 and decomp[0]==char and decomp[1] in accents and cp in cmap:
             composite=TTGlyphPen(None)
-            draw_contours(composite,data['contours'],cap_heights.get(char,700)/700)
+            draw_letter(composite, char, data)
             accent=outline(accents[decomp[1]])
             # Align the accent over the actual letter, not over a fixed-width box.
             amin,_,amax,_=accent.bounds
-            glyph(accent,(data['advance']-(amax+amin))/2).draw(composite,None)
+            glyph(accent,(metrics[name][0]-(amax+amin))/2).draw(composite,None)
             glyphs[cmap[cp]]=composite.glyph()
-            metrics[cmap[cp]]=(data['advance']+3,12)
+            metrics[cmap[cp]]=metrics[name]
+# Contextual alternates reproduce the different pen shapes in the reference.
+# These are character-pair rules, not word-specific images.
+for alternate in ['A.alt', 'O.alt', 'S.alt', 'T.alt']:
+    alt_pen = TTGlyphPen(None)
+    draw_letter(alt_pen, alternate, {})
+    glyphs[alternate] = alt_pen.glyph()
+    metrics[alternate] = (reference_paths[alternate]['advance']*12, 12)
+for name, letter in glyphs.items():
+    if letter.numberOfContours:
+        letter.recalcBounds(None)
+        metrics[name] = (metrics[name][0], letter.xMin)
 font.setupGlyphOrder(list(glyphs))
 font.setupCharacterMap(cmap)
 font.setupGlyf(glyphs)
 font.setupHorizontalMetrics(metrics)
 font.setupHorizontalHeader(ascent=950, descent=-240)
 font.setupOS2(sTypoAscender=950, sTypoDescender=-240, usWinAscent=960, usWinDescent=240, sCapHeight=740, sxHeight=740)
-font.setupNameTable({'familyName':'Studio Marker', 'styleName':'Regular', 'uniqueFontIdentifier':'StudioMarker-3.1', 'fullName':'Studio Marker Regular', 'psName':'StudioMarker-Regular', 'version':'Version 3.1', 'copyright':'Custom font software for snl-new. Lettering study based on announcement-card references; not an official NBC font.'})
+font_revision = hashlib.sha256((root/'scripts/reference-paths.json').read_bytes() + (root/'scripts/letterforms.json').read_bytes() + Path(__file__).read_bytes()).hexdigest()[:10]
+font.setupNameTable({'familyName':'Studio Marker', 'styleName':'Regular', 'uniqueFontIdentifier':f'StudioMarker-4-{font_revision}', 'fullName':'Studio Marker Regular', 'psName':f'StudioMarker-{font_revision}', 'version':'Version 4.0', 'copyright':'Custom font software for snl-new. Lettering study based on announcement-card references; not an official NBC font.'})
 font.setupPost()
 font.setupMaxp()
 # Optical pairs follow the narrow, interlocking spacing on the reference cards.
@@ -247,8 +278,16 @@ kern = {'DA':-75, 'AK':-75, 'KA':-70, 'KO':-85, 'OT':-120,
         'RI':-50, 'HO':-45, 'OZ':-45, 'ZI':-45, 'IE':-40,
         'ER':-50, 'GR':-70, 'RA':-70, 'AC':-60, 'CI':-45,
         'BR':-60, 'RU':-70, 'UN':-55, 'SE':-55, 'EY':-80}
-rules = [f"pos {cmap[ord(a)]} {cmap[ord(b)]} {round(amount * .4)};" for (a,b),amount in kern.items()]
-addOpenTypeFeaturesFromString(font.font, 'feature kern { '+ ' '.join(rules) +' } kern;')
+rules = [f"pos {cmap[ord(a)]} {cmap[ord(b)]} {0 if a in reference_paths and b in reference_paths else round(amount * .4)};" for (a,b),amount in kern.items()]
+# Crossbars overhang their advance widths, matching how the pen strokes interlock.
+rules += [f"pos {cmap[ord('T')]} {cmap[ord('I')]} -60;",
+          f"pos {cmap[ord('O')]} {cmap[ord('T')]} -48;"]
+# Remove duplicate zero pairs before adding the specific optical adjustments.
+rules = [r for r in rules if not r.endswith(' 0;')]
+rules += [f"pos {cmap[ord('O')]} {cmap[ord('H')]} 60;", f"pos {cmap[ord('J')]} {cmap[ord('O')]} -12;", "pos S.alt O.alt 24;", f"pos T.alt {cmap[ord('I')]} -60;"]
+features = 'feature kern { '+ ' '.join(rules) +' } kern;'
+features += f"feature calt {{ sub {cmap[ord('T')]} {cmap[ord('A')]}' by A.alt; sub {cmap[ord('O')]}' [{cmap[ord('C')]} {cmap[ord('N')]}] by O.alt; sub {cmap[ord('S')]}' [{cmap[ord('O')]} O.alt] by S.alt; sub {cmap[ord('S')]} {cmap[ord('T')]}' by T.alt; }} calt;"
+addOpenTypeFeaturesFromString(font.font, features)
 out=root/'public/fonts' 
 out.mkdir(parents=True,exist_ok=True)
 font.save(out/'StudioMarker-Regular.ttf')

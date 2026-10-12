@@ -117,7 +117,7 @@ export async function createRenderer() {
       const light = ctx.createLinearGradient(0,-h/2,0,h/2); light.addColorStop(0,'#ffffff12'); light.addColorStop(.8,'#ffffff00'); light.addColorStop(1,'#55422b08');
       ctx.fillStyle=light; ctx.fillRect(-w/2,-h/2,w,h);
       ctx.restore();
-      const box = { width: w-80, height: h-82, maxSize: i===0 ? 200 : 218, maxLines:3, date:i===0 };
+      const box = { width: w-80, height: h-(i===0 ? 64 : 82), maxSize: i===0 ? 240 : 242, maxLines:3, date:i===0 };
       const layout = fitText(ctx,text,box); layouts.push({...layout,box,text:normalizeText(text)});
       ctx.font=`${layout.fontSize}px ${FONT_STACK}`; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
       ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;

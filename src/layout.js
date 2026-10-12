@@ -51,7 +51,10 @@ export function fitText(ctx, rawText, { width, height, maxSize = 162, maxLines =
       const widths = metrics.map(m => m.width);
       const balance = Math.min(...widths) / Math.max(...widths, 1);
       // A modest size gain shouldn't force three lines or a badly lopsided pair.
-      const score = size * (lines.length > 2 ? .76 : 1) + balance * 5;
+      // Announcement names generally stack at word boundaries. Keep long single
+      // words intact, and avoid making a multiword name a small, flat strip.
+      const singleLinePenalty = words.length > 1 && text.length >= 8 && lines.length === 1 ? .88 : 1;
+      const score = size * (lines.length > 2 ? .76 : singleLinePenalty) + balance * 5;
       if (!best || score > best.score) best = { fontSize: size, lines, lineHeight, height: blockHeight, metrics, score };
     }
     if (best && size < best.fontSize * .75) break;

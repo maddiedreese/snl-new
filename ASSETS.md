@@ -22,9 +22,14 @@ The earlier CC0 candidate is also not the final asset.
 ## Studio Marker font
 
 - Files: `public/fonts/studio-marker.woff2`, `public/fonts/StudioMarker-Regular.ttf`
-- Build source: `scripts/build-font.py`, `scripts/letterforms.json`.
+- Build source: `scripts/build-font.py`, `scripts/reference-paths.json`, `scripts/letterforms.json`.
 - The font software is constructed in this project; no proprietary font binary
   or commercially licensed font program has been copied.
+- Uppercase letter shapes are authored as smooth Bézier paths, preserving the
+  shared scale and differing heights of the confirmed reference. Letters missing
+  from the board are constructed to use the same pen weight. The font includes
+  contextual A, O, S, and T alternates; no whole-word images or name-specific assets
+  are used.
 - Most uppercase/digit outlines use the September 2026 board consistently.
   Individual outlines were digitized and refined from
   letterforms in announcement references. Missing glyphs and punctuation are
